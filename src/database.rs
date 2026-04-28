@@ -78,7 +78,7 @@ impl Database{
             "CREATE TABLE IF NOT EXISTS orders(
                 order_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 customer_id INTEGER,
-                total_price REAL NOT NULL,
+                total_price REAL NOT NULL
             )",())?;
 
         self.conn.execute(
@@ -89,7 +89,7 @@ impl Database{
                 roast TEXT NOT NULL,
                 size TEXT NOT NULL,
                 quantity REAL NOT NULL,
-                price REAL NOT NULL,
+                price REAL NOT NULL
             )",())?;
         Ok(())
     }

@@ -99,3 +99,15 @@ pub async fn addItem(State(state) : State<AppState>, Query(params) : Query<AddOr
     Redirect::to(&format!("/?cart_id={}", params.cart_id)) 
 }
 
+
+//check out, remove things from stock and db,
+//use state and query params from addItem
+//and use checkoutparams
+async fn checkout(){
+
+}
+
+//add more things to stock
+async fn restock(){
+
+}
