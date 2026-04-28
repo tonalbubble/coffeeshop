@@ -3,6 +3,7 @@ use rusqlite::{Connection, Statement, Error};
 use crate::model::ItemOrder;
 
 //database struct: name is .db file name, conn is connection
+#[derive(Debug)]
 pub struct Database{
     pub name: String,
     pub conn: Connection

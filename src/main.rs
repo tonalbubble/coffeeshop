@@ -1,6 +1,7 @@
 pub mod model;
 pub mod database;
 pub mod handlers;
+pub mod parse;
 
 use crate::database::Database;
 use axum::{extract::State, Error, Router};
@@ -41,7 +42,7 @@ pub struct AppState{
 }
 
 
-//#[tokio::main]
+#[tokio::main]
 async fn main() {
     //first, initialize database:
     let db = match db_init() {
@@ -68,7 +69,7 @@ async fn main() {
     //here is where we will assign our handlers to the route
 
     let app = Router::new()
-        .route("/add", get(addItem))
+        .route("/add", axum::routing::get(addItem))
         .with_state(state);
 
 

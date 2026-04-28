@@ -103,6 +103,7 @@ pub enum Coffee{
     MidnightRoast
 }
 
+#[derive(Debug, Clone)]
 pub struct Inventory{
     pub stock : HashMap<Coffee, i32>
 }
@@ -213,6 +214,7 @@ impl CofffeItem{
 
 //might need lifetimes('a things) for the coffeeitem in the parameters
 //this would be represented by an object like 2 bags og Columbian Dark size L which would then be 24 as price
+#[derive(Debug, Clone)]
 pub struct ItemOrder{
     pub coffee : Coffee,
     pub roast : Roast,
@@ -245,6 +247,7 @@ impl ItemOrder{
 //the vector will contain different item orders, 
 
 //customerOrder struct will basically be like a receipt of everything they bought
+#[derive(Debug, Clone)]
 pub struct CustomerOrder{
     pub id : i32,
     //pub customer_id : i32,

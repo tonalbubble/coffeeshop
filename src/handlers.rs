@@ -11,11 +11,15 @@ definitely a couple others but this is the idea
 
 use axum::extract::{State, Query};
 use axum::response::{Html, Redirect};
-use serde::Deserialize;
+//use serde::Deserialize;
 use rand::random;
 
+//use crate::Size;
+use crate::parse::{parse_coffee, parse_size};
+
+use serde::Deserialize;
 use crate::AppState;
-use crate::model::{CustomerOrder, Roast};
+use crate::model::{CustomerOrder, Roast, Coffee, Size};
 //use crate::parse::{parse_coffee, parse_size};
 
 
@@ -26,12 +30,13 @@ this will be used for example when using the basic get/
 
 will be passing these and the Appstate so we have access to cart, inventory and db
 */
-// #[derive(Deserialize)]
+#[derive(Deserialize)]
 pub struct PageParameters{
     pub cart_id : Option<u32>
 }
 
-// #[derive(Deserialize)]
+
+#[derive(Deserialize)]
 pub struct AddOrderParams{
     pub cart_id : u32,
     pub coffee : String,
@@ -55,10 +60,15 @@ before doing all the setup of the actual page
 */
 
 
+#[axum::debug_handler]
 pub async fn addItem(State(state) : State<AppState>, Query(params) : Query<AddOrderParams>) -> Redirect{
 
-    let coffee = &params.coffee;
-    let size = &params.size;
+    //let coffee = &params.coffee;
+    //let size = &params.size;
+
+
+    let coffee = parse_coffee(&params.coffee);
+    let size = parse_size(&params.size);
 
     let amount = &params.quantity;
 
@@ -79,11 +89,11 @@ pub async fn addItem(State(state) : State<AppState>, Query(params) : Query<AddOr
     //finding the entry in the hashmap and if it doesnt exist we insert the a customer order with the current cart_id
     let cart = carts
         .entry(params.cart_id)
-        .or_insert(CustomerOrder::new(params.cart_id as i32));
+        .or_insert_with(|| CustomerOrder::new(params.cart_id as i32));
 
 
-    if inventory.reduce_stock(coffee, amount){
-        cart.add_item(coffee, Roast::Medium, size, amount);
+    if inventory.reduce_stock(coffee, *amount){
+        cart.add_item(coffee, Roast::Medium, size , *amount);
     }  
 
     Redirect::to(&format!("/?cart_id={}", params.cart_id)) 
