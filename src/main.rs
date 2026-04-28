@@ -41,7 +41,7 @@ pub struct AppState{
 }
 
 
-#[tokio::main]
+//#[tokio::main]
 async fn main() {
     //first, initialize database:
     let db = match db_init() {
