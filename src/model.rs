@@ -217,7 +217,7 @@ pub struct ItemOrder{
     pub coffee : Coffee,
     pub roast : Roast,
     pub size : Size,
-    pub quantity : f32,
+    pub quantity : i32,
     pub price : f32
 }
 
@@ -225,9 +225,11 @@ pub struct ItemOrder{
 //
 impl ItemOrder{
 
-    fn new(new_coffee : Coffee, new_roast : Roast, new_size : Size, new_quantity : f32) -> Self{
+    fn new(new_coffee : Coffee, new_roast : Roast, new_size : Size, new_quantity : i32) -> Self{
 
-        let total_price = new_size.price() * new_quantity;
+        let quantity_float = new_quantity as f32;
+
+        let total_price = new_size.price() * quantity_float;
 
         ItemOrder{
             coffee : new_coffee,
@@ -262,7 +264,7 @@ impl CustomerOrder{
         }
     }
 
-    pub fn add_item(&mut self, coffee: Coffee, roast: Roast, size: Size, quantity: f32){
+    pub fn add_item(&mut self, coffee: Coffee, roast: Roast, size: Size, quantity: i32){
 
         //let coffee_item = CofffeItem::new(coffee, roast);
         let item = ItemOrder::new(coffee, roast, size, quantity);

@@ -36,7 +36,7 @@ pub struct AddOrderParams{
     pub cart_id : u32,
     pub coffee : String,
     pub size : String,
-    pub quantity : f32
+    pub quantity : i32
 }
 
 
@@ -88,3 +88,4 @@ pub async fn addItem(State(state) : State<AppState>, Query(params) : Query<AddOr
 
     Redirect::to(&format!("/?cart_id={}", params.cart_id)) 
 }
+
