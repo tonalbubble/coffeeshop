@@ -1,10 +1,10 @@
 pub mod model;
 pub mod database;
-use crate::database::Database;
-
 pub mod handlers;
 
+use crate::database::Database;
 use axum::{extract::State, Error, Router};
+use axum::routing::get;
 use handlers::addItem;
 use std::sync::{Arc, Mutex};
 use tokio::net::TcpListener;
@@ -41,14 +41,14 @@ pub struct AppState{
 }
 
 
-//#[tokio::main]
+#[tokio::main]
 async fn main() {
     //first, initialize database:
     let db = match db_init() {
         Ok(db)=> db,
         Err(e)=> {
             eprintln!("Failed to initialize database: {e}");
-            return;
+            return ;//Redirect::to("/error");
         }
         
     };
@@ -67,12 +67,9 @@ async fn main() {
 
     //here is where we will assign our handlers to the route
 
-    let webApp = Router::new()
-        .route(path, addItem(state, query))
-        .route("/add",               axum::routing::get(addItem))
-        .route(path, method_router)
-        .route(path, method_router)
-        .route(path, method_router);
+    let app = Router::new()
+        .route("/add", get(addItem))
+        .with_state(state);
 
 
     let listener = tokio::net::TcpListener::bind("localhost:7008")

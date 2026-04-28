@@ -26,12 +26,12 @@ this will be used for example when using the basic get/
 
 will be passing these and the Appstate so we have access to cart, inventory and db
 */
-#[derive(Deserialize)]
+// #[derive(Deserialize)]
 pub struct PageParameters{
     pub cart_id : Option<u32>
 }
 
-#[derive(Deserialize)]
+// #[derive(Deserialize)]
 pub struct AddOrderParams{
     pub cart_id : u32,
     pub coffee : String,
@@ -63,14 +63,23 @@ pub async fn addItem(State(state) : State<AppState>, Query(params) : Query<AddOr
     let amount = &params.quantity;
 
     //believe using .lock() here is right because we dont want multiple threads editing
-    let mut carts = state.carts.lock().unwrap();
+    //error checking
+    let mut carts = match state.carts.lock(){
+        Ok(carts) => carts,
+        Err(e) =>{
+            println!("error with cart initialization");
+            return Redirect::to("/error");
+        }
+    };
+
+    //error checking
     let mut inventory = state.inventory.lock().unwrap();
 
 
     //finding the entry in the hashmap and if it doesnt exist we insert the a customer order with the current cart_id
     let cart = carts
         .entry(params.cart_id)
-        .or_insert(||CustomerOrder::new(params.cart_id as i32));
+        .or_insert(CustomerOrder::new(params.cart_id as i32));
 
 
     if inventory.reduce_stock(coffee, amount){

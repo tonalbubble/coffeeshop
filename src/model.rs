@@ -40,7 +40,7 @@ use serde::{Serialize, Deserialize};
 
 
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy)]
 pub enum Size{
     Small,
     Medium,
@@ -70,7 +70,7 @@ impl Size{
 }
 
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy)]
 pub enum Roast{
     Light,
     Medium,
@@ -93,7 +93,7 @@ impl Roast{
 //then string could be better but this will be easier to manage errors
 
 
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
 pub enum Coffee{
     Columbian,
     Arabica,
@@ -138,7 +138,7 @@ impl Inventory{
 
         //get_mut return mutable reference for the value at the key location in the hashmap
         if let Some(current_stock) = self.stock.get_mut(&coffee){
-            if(*current_stock >= amount){
+            if *current_stock >= amount{
                 *current_stock -= amount;
                 return true;
             }
