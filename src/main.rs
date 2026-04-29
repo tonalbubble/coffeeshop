@@ -6,7 +6,7 @@ pub mod parse;
 use crate::database::Database;
 use axum::{extract::State, Error, Router};
 use axum::routing::get;
-use handlers::addItem;
+use handlers::{addItem, loadPage};
 use std::sync::{Arc, Mutex};
 use tokio::net::TcpListener;
 use crate::model::{Coffee, Roast, ItemOrder, CustomerOrder, Size, Inventory};
@@ -30,7 +30,7 @@ use std::collections::HashMap;
 pub struct AppState{
 
     //use a hashmap to match cart to customer so we dont just hav eone cart
-    pub carts : Arc<Mutex<HashMap<u32, CustomerOrder>>>,
+    pub carts : Arc<Mutex<HashMap<i32, CustomerOrder>>>,
 
     
     //using Arc and Mutex so that the multiple users(threads) can access this data safely
@@ -69,6 +69,7 @@ async fn main() {
     //here is where we will assign our handlers to the route
 
     let app = Router::new()
+        .route("/", axum::routing::get(loadPage))
         .route("/add", axum::routing::get(addItem))
         .with_state(state);
 
