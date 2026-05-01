@@ -101,3 +101,31 @@ impl Database{
         Ok(())
     }
 }
+
+
+//this function makes sure our database is initialized with empty tables ready to go.
+pub fn db_init() -> Result<Database, rusqlite::Error>{
+    let db = match Database::new("coffee.db".to_string()){
+        Ok(db) => {
+            println!("Successfully connected to {}",{&db.name});
+            db
+        },
+        Err(e) => {
+            println!("Error connecting to database: {e}");
+            return Err(e);
+        }
+    };
+
+    //commenting this out for now, we don't need to drop and recreate tables every time
+    // match db.drop_tables(){
+    //     Ok(a) => println!("Tables dropped successfully"),
+    //     Err(e) => println!("Error dropping tables: {e}")
+    // };
+
+    // match db.create_tables(){
+    //     Ok(a) => println!("Tables created successfully"),
+    //     Err(e) => println!("Error creating tables: {e}")
+    // };
+
+    Ok(db)
+}

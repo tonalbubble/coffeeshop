@@ -24,9 +24,6 @@ then add to customer order
 then update inventory
 */
 
-
-
-
 use std::collections::HashMap;
 
 //lets do pricing as follows
@@ -117,9 +114,12 @@ impl Inventory{
 
         let mut stock = HashMap::new();
 
+        stock.insert(Coffee::Columbian, 100);
         stock.insert(Coffee::Arabica, 100);
-        //stock.insert(Coffee::Arabica, 100);
-        //stock.insert(Coffee::Arabica, 100);
+        stock.insert(Coffee::Robusta, 100);
+        stock.insert(Coffee::Excelsa, 100);
+        stock.insert(Coffee::BreakfastBlend, 100);
+        stock.insert(Coffee::MidnightRoast, 100);
 
         Inventory { stock }
 

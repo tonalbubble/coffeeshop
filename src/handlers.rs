@@ -49,7 +49,7 @@ pub struct AddInventoryParams{
     pub cart_id : Option<i32>
 }
 
-
+#[derive(Deserialize)]
 pub struct CheckoutParams{
     pub cart_id : i32
 }
@@ -62,6 +62,7 @@ before doing all the setup of the actual page
 
 pub async fn loadPage(State(state) : State<AppState>, Query(params) : Query<PageParameters>) -> Html<String>{
 
+    // #TODO change this to not random!
     let cart_id = params.cart_id.unwrap_or_else(|| random::<i32>());
 
 
@@ -69,15 +70,10 @@ pub async fn loadPage(State(state) : State<AppState>, Query(params) : Query<Page
     {
         let mut carts = state.carts.lock().unwrap();
         carts.entry(cart_id).or_insert_with(|| CustomerOrder::new(cart_id));
-
     }
-
-
     let carts = state.carts.lock().unwrap();
     let cart = carts.get(&cart_id).unwrap();
     let inventory = state.inventory.lock().unwrap();
-
-
 
     //menu html, got help from ai to create the page elements the way i wanted
     let mut menu_html = String::new();
@@ -85,7 +81,6 @@ pub async fn loadPage(State(state) : State<AppState>, Query(params) : Query<Page
     for(coffee, stock) in &inventory.stock{
 
         let name = format!("{:?}", coffee);
-
 
         if *stock > 0{
             menu_html.push_str(&format!(
@@ -100,7 +95,6 @@ pub async fn loadPage(State(state) : State<AppState>, Query(params) : Query<Page
             menu_html.push_str(&format!("<li>{name} — out of stock</li>"));
         }
     }
-
 
     let mut cart_html = String::new();
     for item in &cart.items {
@@ -188,3 +182,90 @@ pub async fn addItem(State(state) : State<AppState>, Query(params) : Query<AddOr
     Redirect::to(&format!("/?cart_id={}", params.cart_id)) 
 }
 
+
+/*
+function checkout: takes in the state and checkout params, removes things from database that were in customer's cart,
+adds checkout struct/db entry, etc.
+
+*/
+pub async fn checkout(State(state): State<AppState>, Query(params): Query<CheckoutParams>) -> Html<String>{
+    //access cart struct based on id, get everything in the order
+    let cart_id = &params.cart_id;
+    let carts = state.carts.lock().unwrap();
+    let cart = carts.get(&cart_id).unwrap();
+
+    //debug print
+    println!("you clicked checkout. your cart id is {cart_id}");
+
+    //initialize html string
+    let mut items_html = String::new();
+
+    //iterate through cart, pushing items onto the string to display.
+    for item in &cart.items {
+        items_html.push_str(&format!(
+            "<li>{:?} {:?} x{} - ${:.2}</li>",
+            item.coffee,
+            item.size,
+            item.quantity,
+            item.price
+        ));
+    }
+
+    //checkout page: display order confirmation and allow user to navigate back to home
+    let html = format!(
+    r#"
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Checkout</title>
+    </head>
+    <body>
+        <h1>Order Confirmation</h1>
+        <h2>Cart ID: {cart_id}</h2>
+
+        <ul>
+            {items_html}
+        </ul>
+
+        <p><strong>Total: ${total:.2}</strong></p>
+
+        <a href="/?cart_id={cart_id}">Back to Shop</a>
+        <a href="/confirm_checkout?cart_id={cart_id}">Confirm Order</a>
+    </body>
+    </html>
+    "#,
+    cart_id = cart_id,
+    items_html = items_html,
+    total = cart.total_price
+    );
+
+    //return html
+    Html(html)
+}
+
+//confirm_checkout function: when called, 
+pub async fn confirm_checkout(State(state): State<AppState>, Query(params): Query<CheckoutParams>) -> Html<String> {
+    let cart_id = params.cart_id;
+
+    let mut carts = state.carts.lock().unwrap();
+
+    let cart = carts.remove(&cart_id).unwrap();
+
+    let html = format!(
+        r#"
+        <!DOCTYPE html>
+        <html>
+        <head><title>Order Complete</title></head>
+        <body>
+            <h1>Thank you for your purchase!</h1>
+            <p>Your order #{cart_id} has been confirmed.</p>
+            <p>Total Paid: ${total:.2}</p>
+            <a href="/">Start New Order</a>
+        </body>
+        </html>
+        "#,
+        cart_id = cart_id,
+        total = cart.total_price
+    );
+    Html(html)
+}

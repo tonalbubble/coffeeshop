@@ -3,10 +3,10 @@ pub mod database;
 pub mod handlers;
 pub mod parse;
 
-use crate::database::Database;
+use crate::database::{Database, db_init};
 use axum::{extract::State, Error, Router};
 use axum::routing::get;
-use handlers::{addItem, loadPage};
+use handlers::{addItem, loadPage, checkout, confirm_checkout};
 use std::sync::{Arc, Mutex};
 use tokio::net::TcpListener;
 use crate::model::{Coffee, Roast, ItemOrder, CustomerOrder, Size, Inventory};
@@ -49,9 +49,8 @@ async fn main() {
         Ok(db)=> db,
         Err(e)=> {
             eprintln!("Failed to initialize database: {e}");
-            return ;//Redirect::to("/error");
+            return ;
         }
-        
     };
     
     //initalize shared state here
@@ -71,6 +70,8 @@ async fn main() {
     let app = Router::new()
         .route("/", axum::routing::get(loadPage))
         .route("/add", axum::routing::get(addItem))
+        .route("/checkout", axum::routing::get(checkout))
+        .route("/confirm_checkout", axum::routing::get(confirm_checkout))
         .with_state(state);
 
 
@@ -128,29 +129,5 @@ async fn main() {
 
 }
 
-//this function makes sure our database is initialized with empty tables ready to go.
-pub fn db_init() -> Result<Database, rusqlite::Error>{
-    let db = match Database::new("coffee.db".to_string()){
-        Ok(db) => {
-            println!("Successfully connected to {}",{&db.name});
-            db
-        },
-        Err(e) => {
-            println!("Error connecting to database: {e}");
-            return Err(e);
-        }
-    };
 
-    match db.drop_tables(){
-        Ok(a) => println!("Tables dropped successfully"),
-        Err(e) => println!("Error dropping tables: {e}")
-    };
-
-    match db.create_tables(){
-        Ok(a) => println!("Tables created successfully"),
-        Err(e) => println!("Error creating tables: {e}")
-    };
-
-    Ok(db)
-}
 
