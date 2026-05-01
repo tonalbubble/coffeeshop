@@ -3,15 +3,13 @@ pub mod database;
 pub mod handlers;
 pub mod parse;
 
+use crate::model::{CustomerOrder, Inventory};
 use crate::database::{Database, db_init};
-use axum::{extract::State, Error, Router};
-use axum::routing::get;
-use handlers::{addItem, loadPage, checkout, confirm_checkout, addInventory};
-use std::sync::{Arc, Mutex};
-use tokio::net::TcpListener;
-use crate::model::{Coffee, Roast, ItemOrder, CustomerOrder, Size, Inventory};
-use std::collections::HashMap;
 
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use axum::Router;
+use handlers::{add_item, load_page, checkout, confirm_checkout, add_inventory};
 
 /*
     Arc allows multiple threads to safely own data, we need this as we are going to just have a simple implementation
@@ -38,14 +36,14 @@ pub struct AppState{
 #[tokio::main]
 async fn main() {
     //initialize database
-    let db = match db_init() {
+    let db = match db_init(false) {
         Ok(db)=> db,
         Err(e)=> {
             println!("Failed to initialize database: {e}");
             return ;
         }
     };
-    
+    //TODO get last id from database and set num_orders equal to that 
     //initalize shared state here
     let state = AppState{
         carts : Arc::new(Mutex::new(HashMap::new())),
@@ -57,11 +55,11 @@ async fn main() {
 
     //assign our handlers to the route
     let app = Router::new()
-        .route("/", axum::routing::get(loadPage))
-        .route("/add", axum::routing::get(addItem))
+        .route("/", axum::routing::get(load_page))
+        .route("/add", axum::routing::get(add_item))
         .route("/checkout", axum::routing::get(checkout))
         .route("/confirm_checkout", axum::routing::get(confirm_checkout))
-        .route("/inventory/add",axum::routing::get(addInventory))
+        .route("/inventory/add",axum::routing::get(add_inventory))
         .with_state(state);
 
     //initialize tokio listener

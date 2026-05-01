@@ -4,9 +4,9 @@ use serde::Deserialize;
 
 use crate::parse::{parse_coffee, parse_size};
 use crate::AppState;
-use crate::model::{CustomerOrder, Roast, Coffee, Size};
+use crate::model::{CustomerOrder, Roast};
 
-//struct to hold parameters we want to pass to the loadPage function
+//struct to hold parameters we want to pass to the load_page function
 #[derive(Deserialize)]
 pub struct PageParameters{
     pub cart_id : Option<i32>
@@ -21,7 +21,7 @@ pub struct AddOrderParams{
     pub qty : i32
 }
 
-//parameters needed for addInventory
+//parameters needed for add_inventory
 #[derive(Deserialize)]
 pub struct AddInventoryParams{
     pub cart_id : Option<i32>,
@@ -41,11 +41,18 @@ had chat come up with a rough outline just so i had an idea of the layout of the
 */
 
 
-//loadPage: loads HTML of website and passes cart id to html
-pub async fn loadPage(State(state) : State<AppState>, Query(params) : Query<PageParameters>) -> Html<String>{
+//load_page: loads HTML of website and passes cart id to html
+pub async fn load_page(State(state) : State<AppState>) -> Html<String>{
 
     //get number of orders from app state
-    let mut num_orders = state.num_orders.lock().unwrap();
+    let num_orders = match state.num_orders.lock() {
+        Ok(g) => g,
+        Err(poisoned) => {
+            println!("num_orders mutex poisoned in load_page");
+            //thread was poisoned but we can still continue
+            poisoned.into_inner()
+        }
+    };
     let cart_id = *num_orders;
 
     //check if cart exists, if not insert new 'cart'/customerOrder
@@ -137,15 +144,13 @@ pub async fn loadPage(State(state) : State<AppState>, Query(params) : Query<Page
         total     = cart.total_price,
     );
 
-
     Html(html)
-
 }
 
-
 //Query allows for deserialize to map our AddOrderParams struct with the values from the URLs
-pub async fn addItem(State(state) : State<AppState>, Query(params) : Query<AddOrderParams>) -> Redirect{
+pub async fn add_item(State(state) : State<AppState>, Query(params) : Query<AddOrderParams>) -> Redirect{
 
+    //collect deserialized parameters
     let coffee = parse_coffee(&params.coffee);
     let size = parse_size(&params.size);
     let amount = &params.qty;
@@ -155,7 +160,7 @@ pub async fn addItem(State(state) : State<AppState>, Query(params) : Query<AddOr
     let mut carts = match state.carts.lock(){
         Ok(carts) => carts,
         Err(e) =>{
-            println!("error with cart initialization");
+            println!("error with cart initialization: {e}");
             return Redirect::to("/error");
         }
     };
@@ -182,14 +187,13 @@ pub async fn addItem(State(state) : State<AppState>, Query(params) : Query<AddOr
     Redirect::to(&format!("/?cart_id={}", params.cart_id)) 
 }
 
-/*
-function addInventory:
 
-*/
-pub async fn addInventory(State(state) : State<AppState>, Query(params) : Query<AddInventoryParams>) -> Redirect{
+// this function allows us to restock coffee
+pub async fn add_inventory(State(state) : State<AppState>, Query(params) : Query<AddInventoryParams>) -> Redirect{
 
     let coffee = parse_coffee(&params.coffee);
 
+    //error checking
     let mut inventory = match state.inventory.lock(){
         Ok(inventory)=> inventory,
         Err(_e)=>{
@@ -198,7 +202,24 @@ pub async fn addInventory(State(state) : State<AppState>, Query(params) : Query<
         }
     };
 
+    //restocking  function
     inventory.add_stock(coffee, params.qty);
+
+    //access db
+    let db = match state.db.lock(){
+        Ok(db) => db,
+        Err(e) =>{
+            println!("db connection was poisoned");
+            e.into_inner()
+        }
+    };
+
+
+    //update db stock
+    match db.increase_stock(coffee){
+        Ok(_) => (),
+        Err(e) => println!("error increasing coffee stock: {e}")
+    };
 
     match params.cart_id {
         Some(_id)=> Redirect::to(&format!("/?cart_id={}", _id)),
@@ -213,11 +234,23 @@ adds checkout struct/db entry, etc.
 pub async fn checkout(State(state): State<AppState>, Query(params): Query<CheckoutParams>) -> Html<String>{
     //access cart struct based on id, get everything in the order
     let cart_id = &params.cart_id;
-    let carts = state.carts.lock().unwrap();
-    let cart = carts.get(&cart_id).unwrap();
 
-    //debug print
-    println!("you clicked checkout. your cart id is {cart_id}");
+    //get carts, error check as well
+    let carts = match state.carts.lock() {
+        Ok(c) => c,
+        Err(poisoned) => {
+            println!("carts mutex poisoned");
+            poisoned.into_inner()
+        }
+    };
+
+    //find specific cart corresponding to id, and error check
+    let cart = match carts.get(&cart_id) {
+        Some(c) => c,
+        None => {
+            return Html("Cart not found".to_string());
+        }
+    };
 
     //initialize html string
     let mut items_html = String::new();
@@ -233,7 +266,7 @@ pub async fn checkout(State(state): State<AppState>, Query(params): Query<Checko
         ));
     }
 
-    //checkout page: display order confirmation and allow user to navigate back to home
+    //checkout page: display items and give customer option to confirm or go back
     let html = format!(
     r#"
     <!DOCTYPE html>
@@ -265,14 +298,31 @@ pub async fn checkout(State(state): State<AppState>, Query(params): Query<Checko
     Html(html)
 }
 
-//confirm_checkout function: when called, 
+//confirm_checkout: confirms transaction, updates database
 pub async fn confirm_checkout(State(state): State<AppState>, Query(params): Query<CheckoutParams>) -> Html<String> {
+
+    //get params from Query
     let cart_id = params.cart_id;
 
-    let mut carts = state.carts.lock().unwrap();
+    //get carts from state
+    let mut carts = match state.carts.lock() {
+        Ok(c) => c,
+        Err(poisoned) => {
+            println!("carts mutex poisoned");
+            poisoned.into_inner()
+        }
+    }; 
 
-    let cart = carts.remove(&cart_id).unwrap();
+    //find cart corresponding to id
+    let cart = match carts.remove(&cart_id) {
+        Some(c) => c,
+        None => {
+            return Html("Cart already checked out or missing".to_string());
+        }
+    };
 
+
+    //html page for checkout confirmation
     let html = format!(
         r#"
         <!DOCTYPE html>
@@ -289,5 +339,42 @@ pub async fn confirm_checkout(State(state): State<AppState>, Query(params): Quer
         cart_id = cart_id,
         total = cart.total_price
     );
+
+    //get database from state variables
+    let db = match state.db.lock(){
+        Ok(db) => db,
+        Err(e) =>{
+            println!("db connection was poisoned");
+            e.into_inner() //still gives database access
+        }
+    };
+
+    //add order to database
+    match db.insert_order(cart_id, cart.total_price){
+        Ok(_) => (),
+        Err(e) => println!("error adding order to database: {e}"),
+    };
+
+    //then we can add each item and amount from cart to the database as well
+    for item in &cart.items {
+        match db.insert_product_order(cart_id, item){
+            Ok(_) => (),
+            Err(e) => println!("failed to add product_order to database: {e}"),
+        };
+        //reduce database stock as well here
+        match db.reduce_stock(item){
+            Ok(_) => (),
+            Err(e) => println!("failed to add product_order to database: {e}"),
+        };
+    }
+
+    //increment global num_orders so we get a new cart_id 
+    match state.num_orders.lock(){
+        Ok(mut num_orders) => *num_orders += 1,
+        Err(e) => {
+            println!("error getting num orders in confirm_checkout {e}");
+        }
+    };
+
     Html(html)
 }

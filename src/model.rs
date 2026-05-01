@@ -23,18 +23,7 @@ then add to customer order
 
 then update inventory
 */
-
 use std::collections::HashMap;
-
-//lets do pricing as follows:
-//LARGE => $12
-//MEDIUM => $8
-//SMALL => $5
-
-use std::hash::RandomState;
-use serde::{Serialize, Deserialize};
-
-
 
 #[derive(Debug, Clone, Copy)]
 pub enum Size{
@@ -111,6 +100,7 @@ pub struct Inventory{
 impl Inventory{
     pub fn new() -> Self{
 
+        //TODO: read from database to get these values
         let mut stock = HashMap::new();
 
         stock.insert(Coffee::Columbian, 100);
@@ -147,18 +137,18 @@ impl Inventory{
         false
     }
 
-
-    fn print_inventory(&self){
-        println!("--------INVENTORY---------");
-        for(coffee, amount) in &self.stock{
-            println!("{:?}, {}", coffee, amount);
-        }
-    }
+    //Commented out bc we don't use it anywhere
+    // fn print_inventory(&self){
+    //     println!("--------INVENTORY---------");
+    //     for(coffee, amount) in &self.stock{
+    //         println!("{:?}, {}", coffee, amount);
+    //     }
+    // }
 
 }
 
 impl Coffee{
-    fn description(&self) -> &'static str{
+    pub fn description(&self) -> &'static str{
         match self {
             Coffee::Columbian => "Smooth and balanced with mild acidity",
             Coffee::Arabica => "Sweet and complex with fruity notes",

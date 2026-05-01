@@ -1,6 +1,7 @@
-use rusqlite::{Connection, Statement, Error};
+use rusqlite::{Connection, Error};
 use std::fs;
 use crate::model::ItemOrder;
+use crate::model::Coffee;
 
 //database struct: name is .db file name, conn is connection
 #[derive(Debug)]
@@ -38,19 +39,19 @@ impl Database{
     }
 
     //dynamically insert a new order into orders table
-    pub fn insert_order(&self, order_id : i32, total_price : f32) -> Result<i64, Error>{
+    pub fn insert_order(&self, order_id : i32, total_price : f32) -> Result<(), Error>{
         self.conn.execute(
             "INSERT INTO orders (order_id, total_price)
              VALUES (?1, ?2)",
             (order_id, total_price),
         )?;
-        Ok(self.conn.last_insert_rowid())
+        Ok(())
     }
 
-    //dynamically add a product_order to the db 
-    pub fn insert_product_order(&self, order_id : i64, item : &ItemOrder ) -> Result<(), Error>{
+    //dynamically add a product_order to the db, reducing stock as well.
+    pub fn insert_product_order(&self, order_id : i32, item : &ItemOrder ) -> Result<(), Error>{
         self.conn.execute(
-            "INSERT INTO order_items 
+            "INSERT INTO product_order 
             (order_id, coffee, roast, size, quantity, price)
             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             (
@@ -66,12 +67,39 @@ impl Database{
         Ok(())
     }
 
+    //reduce stock in db after customer checks out
+    pub fn reduce_stock(&self, order: &ItemOrder) -> Result<(), Error> {
+        let coffee = Coffee::to_str(&order.coffee);
+        let qty = order.quantity;
+
+        self.conn.execute(
+            "UPDATE product
+            SET amount = amount - ?1
+            WHERE name = ?2",
+            (qty, coffee),
+        )?;
+        Ok(())
+    }
+
+    //increase stock when restocking happens
+    pub fn increase_stock(&self, coffee:Coffee) -> Result<(), Error> {
+        let coffee = Coffee::to_str(&coffee);
+
+        self.conn.execute(
+            "UPDATE product
+            SET amount = amount + 10
+            WHERE name = ?1",
+            (coffee,),
+        )?;
+        Ok(())
+    }
 
 }
 
 
-//this function makes sure our database is initialized with empty tables ready to go
-pub fn db_init() -> Result<Database, rusqlite::Error>{
+//this function lets us connect to an existing database OR creaet a new one
+//takes in bool on whether we want to start fresh or connect to an existing file
+pub fn db_init(new_db: bool) -> Result<Database, rusqlite::Error>{
     let db = match Database::new("sql/coffee.db".to_string()){
         Ok(db) => {
             println!("Successfully connected to {}",{&db.name});
@@ -83,14 +111,17 @@ pub fn db_init() -> Result<Database, rusqlite::Error>{
         }
     };
 
-    match db.create_tables(){
-        Ok(a) => println!("Tables created successfully"),
-        Err(e) => println!("Error creating tables: {e}")
-    };
+    //if it's a new database, we create tables and insert products
+    if new_db{
+        match db.create_tables(){
+            Ok(_) => println!("Tables created successfully"),
+            Err(e) => println!("Error creating tables: {e}")
+        };
 
-    match db.insert_products(){
-        Ok(a) => println!("Products entered successfully"),
-        Err(e) => println!("Error inserting products: {e}")
+        match db.insert_products(){
+            Ok(_) => println!("Products entered successfully"),
+            Err(e) => println!("Error inserting products: {e}")
+        }
     }
 
     Ok(db)

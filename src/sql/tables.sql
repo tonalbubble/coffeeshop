@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS orders(
 );
 
 CREATE TABLE IF NOT EXISTS product_order(
-    product_id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id INTEGER NOT NULL,
     coffee TEXT NOT NULL,
     roast TEXT NOT NULL,
