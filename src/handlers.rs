@@ -1,41 +1,18 @@
-/*
-here is where we will build the functionality for handling the different url
-probably will have something like 
-
-/add_inventory
-/add
-/order
-
-definitely a couple others but this is the idea
-*/
-
 use axum::extract::{State, Query};
 use axum::response::{Html, Redirect};
-//use serde::Deserialize;
-use rand::random;
-
-//use crate::Size;
-use crate::parse::{parse_coffee, parse_size};
-
 use serde::Deserialize;
+
+use crate::parse::{parse_coffee, parse_size};
 use crate::AppState;
 use crate::model::{CustomerOrder, Roast, Coffee, Size};
-//use crate::parse::{parse_coffee, parse_size};
 
-
-
-/*
-these struct will allow us to handle the parameters we want by passingh them when we use a handler
-this will be used for example when using the basic get/
-
-will be passing these and the Appstate so we have access to cart, inventory and db
-*/
+//struct to hold parameters we want to pass to the loadPage function
 #[derive(Deserialize)]
 pub struct PageParameters{
     pub cart_id : Option<i32>
 }
 
-
+//parameters needed for addOrder function
 #[derive(Deserialize)]
 pub struct AddOrderParams{
     pub cart_id : i32,
@@ -44,6 +21,7 @@ pub struct AddOrderParams{
     pub qty : i32
 }
 
+//parameters needed for addInventory
 #[derive(Deserialize)]
 pub struct AddInventoryParams{
     pub cart_id : Option<i32>,
@@ -51,26 +29,24 @@ pub struct AddInventoryParams{
     pub qty: i32
 }
 
+//checkout parameters
 #[derive(Deserialize)]
 pub struct CheckoutParams{
     pub cart_id : i32
 }
 
 /*
-gonna try to build a handler for when the user clicks a add item to order
-before doing all the setup of the actual page
-
 NOTE : had to use some outside resources for the handler setup, mainly i just looked online for basics, but i also 
 had chat come up with a rough outline just so i had an idea of the layout of the handler setup
 */
 
 
-
+//loadPage: loads HTML of website and passes cart id to html
 pub async fn loadPage(State(state) : State<AppState>, Query(params) : Query<PageParameters>) -> Html<String>{
 
-    // #TODO change this to not random!
-    let cart_id = params.cart_id.unwrap_or_else(|| random::<i32>());
-
+    //get number of orders from app state
+    let mut num_orders = state.num_orders.lock().unwrap();
+    let cart_id = *num_orders;
 
     //check if cart exists, if not insert new 'cart'/customerOrder
     //first must be mutable in order to add to it
@@ -89,7 +65,7 @@ pub async fn loadPage(State(state) : State<AppState>, Query(params) : Query<Page
         .or_insert_with(||CustomerOrder::new(cart_id as i32));
 
 
-//get inventory hashmap from appState
+    //get inventory hashmap from appState
     let inventory = match state.inventory.lock() {
         Ok(inventory)=> inventory,
         Err(_e)=>{
@@ -172,7 +148,6 @@ pub async fn addItem(State(state) : State<AppState>, Query(params) : Query<AddOr
 
     let coffee = parse_coffee(&params.coffee);
     let size = parse_size(&params.size);
-
     let amount = &params.qty;
 
     //believe using .lock() here is right because we dont want multiple threads editing
