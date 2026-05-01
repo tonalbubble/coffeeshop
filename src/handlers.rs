@@ -44,9 +44,11 @@ pub struct AddOrderParams{
     pub qty : i32
 }
 
-
+#[derive(Deserialize)]
 pub struct AddInventoryParams{
-    pub cart_id : Option<i32>
+    pub cart_id : Option<i32>,
+    pub coffee: String,
+    pub qty: i32
 }
 
 #[derive(Deserialize)]
@@ -57,7 +59,11 @@ pub struct CheckoutParams{
 /*
 gonna try to build a handler for when the user clicks a add item to order
 before doing all the setup of the actual page
+
+NOTE : had to use some outside resources for the handler setup, mainly i just looked online for basics, but i also 
+had chat come up with a rough outline just so i had an idea of the layout of the handler setup
 */
+
 
 
 pub async fn loadPage(State(state) : State<AppState>, Query(params) : Query<PageParameters>) -> Html<String>{
@@ -67,17 +73,35 @@ pub async fn loadPage(State(state) : State<AppState>, Query(params) : Query<Page
 
 
     //check if cart exists, if not insert new 'cart'/customerOrder
-    {
-        let mut carts = state.carts.lock().unwrap();
-        carts.entry(cart_id).or_insert_with(|| CustomerOrder::new(cart_id));
-    }
-    let carts = state.carts.lock().unwrap();
-    let cart = carts.get(&cart_id).unwrap();
-    let inventory = state.inventory.lock().unwrap();
+    //first must be mutable in order to add to it
+    let mut carts = match state.carts.lock(){
+        Ok(carts)=> carts,
+        Err(_e)=>{
+            println!("error loading customer carts hashmap");
+            //will just show this on the page
+            return Html("<h1>Something went wrong</h1>".to_string())
+        }
+    };
+
+    //access the customerOrder in side the hashmap here
+    let cart = carts
+        .entry(cart_id)
+        .or_insert_with(||CustomerOrder::new(cart_id as i32));
+
+
+//get inventory hashmap from appState
+    let inventory = match state.inventory.lock() {
+        Ok(inventory)=> inventory,
+        Err(_e)=>{
+            println!("Error getting inventory from Appstate");
+            return Html("<h1>Inventory could not be initialized</h1>".to_string())
+        }
+    };
 
     //menu html, got help from ai to create the page elements the way i wanted
     let mut menu_html = String::new();
 
+    //create the options to select coffee(s,m,l) from the coffees that are in stock
     for(coffee, stock) in &inventory.stock{
 
         let name = format!("{:?}", coffee);
@@ -95,7 +119,7 @@ pub async fn loadPage(State(state) : State<AppState>, Query(params) : Query<Page
             menu_html.push_str(&format!("<li>{name} — out of stock</li>"));
         }
     }
-
+    //simple cart of items that have been added to cart, updates as things are added
     let mut cart_html = String::new();
     for item in &cart.items {
         cart_html.push_str(&format!(
@@ -143,12 +167,8 @@ pub async fn loadPage(State(state) : State<AppState>, Query(params) : Query<Page
 }
 
 
-//#[axum::debug_handler]
+//Query allows for deserialize to map our AddOrderParams struct with the values from the URLs
 pub async fn addItem(State(state) : State<AppState>, Query(params) : Query<AddOrderParams>) -> Redirect{
-
-    //let coffee = &params.coffee;
-    //let size = &params.size;
-
 
     let coffee = parse_coffee(&params.coffee);
     let size = parse_size(&params.size);
@@ -166,8 +186,13 @@ pub async fn addItem(State(state) : State<AppState>, Query(params) : Query<AddOr
     };
 
     //error checking
-    let mut inventory = state.inventory.lock().unwrap();
-
+    let mut inventory = match state.inventory.lock(){
+        Ok(inventory) => inventory,
+        Err(_e) =>{
+            println!("error initializing inventory");
+            return Redirect::to("/error")
+        }
+    };
 
     //finding the entry in the hashmap and if it doesnt exist we insert the a customer order with the current cart_id
     let cart = carts
@@ -182,11 +207,33 @@ pub async fn addItem(State(state) : State<AppState>, Query(params) : Query<AddOr
     Redirect::to(&format!("/?cart_id={}", params.cart_id)) 
 }
 
+/*
+function addInventory:
+
+*/
+pub async fn addInventory(State(state) : State<AppState>, Query(params) : Query<AddInventoryParams>) -> Redirect{
+
+    let coffee = parse_coffee(&params.coffee);
+
+    let mut inventory = match state.inventory.lock(){
+        Ok(inventory)=> inventory,
+        Err(_e)=>{
+            println!("error getting inventory");
+            return Redirect::to("/error")
+        }
+    };
+
+    inventory.add_stock(coffee, params.qty);
+
+    match params.cart_id {
+        Some(_id)=> Redirect::to(&format!("/?cart_id={}", _id)),
+        None => Redirect::to("/"),
+    }
+}
 
 /*
 function checkout: takes in the state and checkout params, removes things from database that were in customer's cart,
 adds checkout struct/db entry, etc.
-
 */
 pub async fn checkout(State(state): State<AppState>, Query(params): Query<CheckoutParams>) -> Html<String>{
     //access cart struct based on id, get everything in the order

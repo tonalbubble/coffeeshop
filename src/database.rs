@@ -103,7 +103,7 @@ impl Database{
 }
 
 
-//this function makes sure our database is initialized with empty tables ready to go.
+//this function makes sure our database is initialized with empty tables ready to go
 pub fn db_init() -> Result<Database, rusqlite::Error>{
     let db = match Database::new("coffee.db".to_string()){
         Ok(db) => {

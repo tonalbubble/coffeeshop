@@ -6,7 +6,7 @@ pub mod parse;
 use crate::database::{Database, db_init};
 use axum::{extract::State, Error, Router};
 use axum::routing::get;
-use handlers::{addItem, loadPage, checkout, confirm_checkout};
+use handlers::{addItem, loadPage, checkout, confirm_checkout, addInventory};
 use std::sync::{Arc, Mutex};
 use tokio::net::TcpListener;
 use crate::model::{Coffee, Roast, ItemOrder, CustomerOrder, Size, Inventory};
@@ -41,7 +41,6 @@ pub struct AppState{
 
 }
 
-
 #[tokio::main]
 async fn main() {
     //first, initialize database:
@@ -53,6 +52,7 @@ async fn main() {
         }
     };
     
+
     //initalize shared state here
     let state = AppState{
         carts : Arc::new(Mutex::new(HashMap::new())),
@@ -72,6 +72,7 @@ async fn main() {
         .route("/add", axum::routing::get(addItem))
         .route("/checkout", axum::routing::get(checkout))
         .route("/confirm_checkout", axum::routing::get(confirm_checkout))
+        .route("/inventory/add",axum::routing::get(addInventory))
         .with_state(state);
 
 

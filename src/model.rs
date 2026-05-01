@@ -26,8 +26,7 @@ then update inventory
 
 use std::collections::HashMap;
 
-//lets do pricing as follows
-
+//lets do pricing as follows:
 //LARGE => $12
 //MEDIUM => $8
 //SMALL => $5
@@ -184,33 +183,6 @@ impl Coffee{
 }
 
 
-//this could represent Columbian Dark
-//this struct represents what we have on the menu
-
-/* 
-struct CofffeItem{
-    name : Coffee,
-    roast : Roast,
-    //description will always be the same for the coffees so instead of lifetimes used static
-    description : &'static str
-}
-
-
-impl CofffeItem{
-    fn new(new_name : Coffee, new_roast : Roast) -> Self{
-
-        let new_description = Coffee::description(&new_name);
-
-        CofffeItem{
-            name : new_name,
-            roast : new_roast,
-            description : new_description
-        }
-
-    }
-}
-*/
-
 
 //might need lifetimes('a things) for the coffeeitem in the parameters
 //this would be represented by an object like 2 bags og Columbian Dark size L which would then be 24 as price
@@ -282,22 +254,51 @@ impl CustomerOrder{
 
 
 
+#[cfg(test)]
 
-/*
-pub struct Customer{
-    id : i32,
-    name : String,
-    email : String
-}
+mod tests{
 
-impl Customer{
-    fn new(new_id : i32, new_name : String, new_email : String) -> Self
-    {
-        Customer{
-            id : new_id,
-            name : new_name,
-            email : new_email
-        }
+    use super::*;
+
+    #[test]
+    fn add_stock(){
+        let mut inventory = Inventory::new();
+        inventory.add_stock(Coffee::Arabica, 20);
+
+        assert_eq!(inventory.stock[&Coffee::Arabica], 120)
     }
+
+
+    #[test]
+    fn reduce_stock_insufficient(){
+        let mut inventory = Inventory::new();
+
+
+        //reduce_stokc returns a bool(true if succesful false if not enough stock in inventory)
+        let result = inventory.reduce_stock(Coffee::Columbian, 101);
+
+        assert!(!result);
+        assert_eq!(inventory.stock[&Coffee::Columbian], 100);
+
+    }
+
+
+    #[test]
+    fn test_add_items_total(){
+        let mut order = CustomerOrder::new(1);
+
+        order.add_item(Coffee::Arabica, Roast::Medium, Size::Large, 2);
+
+        assert_eq!(order.total_price, 24.0);
+    }
+
+
+    #[test]
+    fn test_new_order(){
+        let mut order = CustomerOrder::new(2);
+
+        assert_eq!(order.total_price, 0.0);
+        assert_eq!(order.items.len(), 0);
+    }
+
 }
-*/
