@@ -16,6 +16,9 @@ checkout feature -> users can checkout and this clears the cart, storing the pur
 mulitple-concurrent users -> Axum and Tokio were used as handlers for the multi-threaded functionality
 
 --------------------------------------------------
+Setup:
+cargo run in terminal of VScode, then go to localhost:7008
+--------------------------------------------------
 
 Resources used:
 Language : Rust
