@@ -12,6 +12,7 @@ pub struct PageParameters{
     pub cart_id : Option<i32>
 }
 
+
 //parameters needed for addOrder function
 #[derive(Deserialize)]
 pub struct AddOrderParams{
@@ -24,7 +25,6 @@ pub struct AddOrderParams{
 //parameters needed for add_inventory
 #[derive(Deserialize)]
 pub struct AddInventoryParams{
-    pub cart_id : Option<i32>,
     pub coffee: String,
     pub qty: i32
 }
@@ -91,11 +91,11 @@ pub async fn load_page(State(state) : State<AppState>) -> Html<String>{
 
         if *stock > 0{
             menu_html.push_str(&format!(
-                r#"<li>{name} (stock: {stock}) — 
+                r#"<h3><li>{name} (stock: {stock}) — 
                     <a href="/add?cart_id={cart_id}&coffee={name}&size=Small&qty=1">Small $5</a> | 
                     <a href="/add?cart_id={cart_id}&coffee={name}&size=Medium&qty=1">Medium $8</a> | 
                     <a href="/add?cart_id={cart_id}&coffee={name}&size=Large&qty=1">Large $12</a>
-                </li>"#
+                </h3></li>"#
             ));
 
         } else {
@@ -117,24 +117,16 @@ pub async fn load_page(State(state) : State<AppState>) -> Html<String>{
         <head><title>Coffee Shop</title></head>
         <body>
             <h1>Coffee Shop</h1>
+            <h3>
+            <li><a href="/admin">Management Page</a></li>
 
             <h2>Menu</h2>
             <ul>{menu_html}</ul>
 
-            <h2>Restock</h2>
-            <ul>
-                <li><a href="/inventory/add?coffee=Arabica&qty=10&cart_id={cart_id}">+10 Arabica</a></li>
-                <li><a href="/inventory/add?coffee=Columbian&qty=10&cart_id={cart_id}">+10 Columbian</a></li>
-                <li><a href="/inventory/add?coffee=Robusta&qty=10&cart_id={cart_id}">+10 Robusta</a></li>
-                <li><a href="/inventory/add?coffee=Excelsa&qty=10&cart_id={cart_id}">+10 Excelsa</a></li>
-                <li><a href="/inventory/add?coffee=BreakfastBlend&qty=10&cart_id={cart_id}">+10 Breakfast Blend</a></li>
-                <li><a href="/inventory/add?coffee=MidnightRoast&qty=10&cart_id={cart_id}">+10 Midnight Roast</a></li>
-            </ul>
-
             <h2>Your Cart (id: {cart_id})</h2>
             <ul>{cart_html}</ul>
-            <p>Total: ${total:.2}</p>
-            <a href="/checkout?cart_id={cart_id}">Checkout</a>
+            <h3>Total: ${total:.2}</h3>
+            <h3><a href="/checkout?cart_id={cart_id}">Checkout</a></h3>
         </body>
         </html>
     "#,
@@ -146,6 +138,38 @@ pub async fn load_page(State(state) : State<AppState>) -> Html<String>{
 
     Html(html)
 }
+
+// admin page: restock, view orders
+pub async fn admin_page(State(state): State<AppState>) -> Html<String>{
+    //get global inventory
+    let inventory = match state.inventory.lock(){
+        Ok(inv) => inv,
+        Err(e) => return Html(format!("Inventory error: {e}").to_string())
+    };
+
+    //initialize empty html string to push onto
+    let mut html = r#"
+        <title>Management Page</title>
+        
+        <h1>Inventory</h1>
+        "#.to_string();
+
+    //iterate through coffees, find stock and name, give option to increase stock and show current stock
+    for(coffee, stock) in &inventory.stock{
+
+        let name = &coffee.to_str();
+
+        html.push_str(&format!(
+            r#"<h3><li> <a href="/inventory/add?coffee={name}&qty=10">+10 {name}</a> ({stock} in stock)
+            </li></h3>"#
+        ));
+    }
+
+    html.push_str(r#"<h2><a href="/">Home Page</a></h2>"#);
+    Html(html)
+}
+
+
 
 //Query allows for deserialize to map our AddOrderParams struct with the values from the URLs
 pub async fn add_item(State(state) : State<AppState>, Query(params) : Query<AddOrderParams>) -> Redirect{
@@ -191,9 +215,10 @@ pub async fn add_item(State(state) : State<AppState>, Query(params) : Query<AddO
 // this function allows us to restock coffee
 pub async fn add_inventory(State(state) : State<AppState>, Query(params) : Query<AddInventoryParams>) -> Redirect{
 
+    //parse coffee from params
     let coffee = parse_coffee(&params.coffee);
 
-    //error checking
+    //error checking: open inventory
     let mut inventory = match state.inventory.lock(){
         Ok(inventory)=> inventory,
         Err(_e)=>{
@@ -202,7 +227,7 @@ pub async fn add_inventory(State(state) : State<AppState>, Query(params) : Query
         }
     };
 
-    //restocking  function
+    //call restocking  function
     inventory.add_stock(coffee, params.qty);
 
     //access db
@@ -214,17 +239,14 @@ pub async fn add_inventory(State(state) : State<AppState>, Query(params) : Query
         }
     };
 
-
     //update db stock
     match db.increase_stock(coffee){
         Ok(_) => (),
         Err(e) => println!("error increasing coffee stock: {e}")
     };
 
-    match params.cart_id {
-        Some(_id)=> Redirect::to(&format!("/?cart_id={}", _id)),
-        None => Redirect::to("/"),
-    }
+    //redirect back to admin
+    Redirect::to("/admin")
 }
 
 /*
@@ -258,7 +280,7 @@ pub async fn checkout(State(state): State<AppState>, Query(params): Query<Checko
     //iterate through cart, pushing items onto the string to display.
     for item in &cart.items {
         items_html.push_str(&format!(
-            "<li>{:?} {:?} x{} - ${:.2}</li>",
+            "<h3><li>{:?} {:?} x{} - ${:.2}</li></h3>",
             item.coffee,
             item.size,
             item.quantity,
@@ -282,10 +304,10 @@ pub async fn checkout(State(state): State<AppState>, Query(params): Query<Checko
             {items_html}
         </ul>
 
-        <p><strong>Total: ${total:.2}</strong></p>
+        <h3><strong>Total: ${total:.2}</strong></h3>
 
-        <a href="/?cart_id={cart_id}">Back to Shop</a>
-        <a href="/confirm_checkout?cart_id={cart_id}">Confirm Order</a>
+        <h3><a href="/?cart_id={cart_id}">Back to Shop</a></h3>
+        <h3><a href="/confirm_checkout?cart_id={cart_id}">Confirm Order</a></h3>
     </body>
     </html>
     "#,
@@ -330,8 +352,8 @@ pub async fn confirm_checkout(State(state): State<AppState>, Query(params): Quer
         <head><title>Order Complete</title></head>
         <body>
             <h1>Thank you for your purchase!</h1>
-            <p>Your order #{cart_id} has been confirmed.</p>
-            <p>Total Paid: ${total:.2}</p>
+            <h3>Your order #{cart_id} has been confirmed.</h3>
+            <h3>Total Paid: ${total:.2}</h3>
             <a href="/">Start New Order</a>
         </body>
         </html>

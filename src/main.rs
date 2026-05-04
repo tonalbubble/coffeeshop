@@ -9,7 +9,7 @@ use crate::database::{Database, db_init};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use axum::Router;
-use handlers::{add_item, load_page, checkout, confirm_checkout, add_inventory};
+use handlers::{add_item, load_page, admin_page, checkout, confirm_checkout, add_inventory};
 
 /*
     Arc allows multiple threads to safely own data, we need this as we are going to just have a simple implementation
@@ -56,6 +56,7 @@ async fn main() {
     //assign our handlers to the route
     let app = Router::new()
         .route("/", axum::routing::get(load_page))
+        .route("/admin", axum::routing::get(admin_page))
         .route("/add", axum::routing::get(add_item))
         .route("/checkout", axum::routing::get(checkout))
         .route("/confirm_checkout", axum::routing::get(confirm_checkout))
