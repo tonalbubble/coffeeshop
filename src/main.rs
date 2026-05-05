@@ -33,6 +33,7 @@ pub struct AppState{
     pub num_orders: Arc<Mutex<i32>>
 }
 
+
 #[tokio::main]
 async fn main() {
     //initialize database
@@ -48,8 +49,8 @@ async fn main() {
     let state = AppState{
         carts : Arc::new(Mutex::new(HashMap::new())),
         inventory  :Arc::new(Mutex::new(Inventory::new())),
-        db : Arc::new(Mutex::new(db)),
-        num_orders: Arc::new(Mutex::new(1))
+        num_orders: Arc::new(Mutex::new(Database::get_num_orders(&db)+1)),
+        db : Arc::new(Mutex::new(db))
     };
 
 
@@ -73,3 +74,4 @@ async fn main() {
         .await
         .expect("server failed to start")
 }
+

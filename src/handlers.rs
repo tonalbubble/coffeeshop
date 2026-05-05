@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::parse::{parse_coffee, parse_size};
 use crate::AppState;
-use crate::model::{CustomerOrder, Roast};
+use crate::model::{CustomerOrder, Roast, Size};
 
 //struct to hold parameters we want to pass to the load_page function
 #[derive(Deserialize)]
@@ -203,8 +203,8 @@ pub async fn add_item(State(state) : State<AppState>, Query(params) : Query<AddO
         .entry(params.cart_id)
         .or_insert_with(|| CustomerOrder::new(params.cart_id as i32));
 
-
-    if inventory.reduce_stock(coffee, *amount){
+    let amt_reduce = Size::amount(&size);
+    if inventory.reduce_stock(coffee, amt_reduce){
         cart.add_item(coffee, Roast::Medium, size , *amount);
     }  
 

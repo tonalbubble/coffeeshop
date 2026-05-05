@@ -45,6 +45,16 @@ impl Size{
         }
     }
 
+    //how much stock to take out when reducing stock
+    pub fn amount(&self) ->i32{
+        match self{
+            Size::Small => 1,
+            Size::Medium => 2,
+            Size::Large => 3
+        }
+    }
+
+    //to_str method
     pub fn to_str(&self) -> &str {
         match self {
             Size::Small => "Small",

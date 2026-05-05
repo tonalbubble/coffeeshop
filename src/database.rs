@@ -1,7 +1,6 @@
 use rusqlite::{Connection, Error};
 use std::fs;
-use crate::model::ItemOrder;
-use crate::model::Coffee;
+use crate::model::{ItemOrder, Coffee, Size};
 
 //database struct: name is .db file name, conn is connection
 #[derive(Debug)]
@@ -70,7 +69,7 @@ impl Database{
     //reduce stock in db after customer checks out
     pub fn reduce_stock(&self, order: &ItemOrder) -> Result<(), Error> {
         let coffee = Coffee::to_str(&order.coffee);
-        let qty = order.quantity;
+        let qty = order.quantity*Size::amount(&order.size);
 
         self.conn.execute(
             "UPDATE product
@@ -94,6 +93,24 @@ impl Database{
         Ok(())
     }
 
+    //function to know what cart id to start on upon startup
+    pub fn get_num_orders(&self) -> i32 {
+        //use a single-value select statement to get the 
+        let max_id; 
+        match self.conn.query_row(
+            "SELECT COALESCE(MAX(order_id), 0) FROM orders",
+            [],
+            |row| row.get(0),
+        ){
+            Ok(val) => max_id = val,
+            Err(_) => {
+                max_id = 1;
+                println!("error loading number of orders");
+            }
+        };
+
+        max_id
+    }
 }
 
 
