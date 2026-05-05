@@ -35,6 +35,11 @@ pub struct CheckoutParams{
     pub cart_id : i32
 }
 
+#[derive(Deserialize)]
+pub struct RemoveParams{
+    pub cart_id: i32
+}
+
 /*
 NOTE : had to use some outside resources for the handler setup, mainly i just looked online for basics, but i also 
 had chat come up with a rough outline just so i had an idea of the layout of the handler setup
@@ -248,6 +253,13 @@ pub async fn add_inventory(State(state) : State<AppState>, Query(params) : Query
     //redirect back to admin
     Redirect::to("/admin")
 }
+
+//basic function to remove item from buying list
+//didn't have time to implement :(
+// pub async fn remove(State(state): State<AppState>, Query(RemoveParams)) -> Redirect{
+
+// }
+
 
 /*
 function checkout: takes in the state and checkout params, removes things from database that were in customer's cart,

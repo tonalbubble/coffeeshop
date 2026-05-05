@@ -1,6 +1,8 @@
 use rusqlite::{Connection, Error};
 use std::fs;
+use std::collections::HashMap;
 use crate::model::{ItemOrder, Coffee, Size};
+use crate::parse::parse_coffee;
 
 //database struct: name is .db file name, conn is connection
 #[derive(Debug)]
@@ -111,15 +113,22 @@ impl Database{
 
         max_id
     }
+
+
 }
 
 
 //this function lets us connect to an existing database OR creaet a new one
 //takes in bool on whether we want to start fresh or connect to an existing file
-pub fn db_init(new_db: bool) -> Result<Database, rusqlite::Error>{
+pub fn db_init(new_db: bool) -> Result<(Database,HashMap<Coffee,i32>), rusqlite::Error>{
+    let mut stock = HashMap::new();
     let db = match Database::new("sql/coffee.db".to_string()){
         Ok(db) => {
             println!("Successfully connected to {}",{&db.name});
+            match load_inventory(&db){
+                Ok(inv) => stock = inv,
+                Err(_) => println!("failed to read inventory from database")
+            };
             db
         },
         Err(e) => {
@@ -140,6 +149,26 @@ pub fn db_init(new_db: bool) -> Result<Database, rusqlite::Error>{
             Err(e) => println!("Error inserting products: {e}")
         }
     }
+    Ok((db, stock))
+}
 
-    Ok(db)
+
+//function to populate inventory upon startup
+pub fn load_inventory(db: &Database) -> Result<HashMap<Coffee, i32>, Error>{
+    let mut stock = HashMap::new();
+
+    let mut statement = db.conn.prepare("SELECT name, amount FROM product")?;
+
+    let rows = statement.query_map([],|row|{
+        let coffee: String = row.get(0)?;
+        let amount: i32 =  row.get(1)?;
+        Ok((coffee,amount))
+    })?;
+
+    for row in rows{
+        let (coffee,amount) = row?;
+        let coffee = parse_coffee(&coffee);
+        stock.insert(coffee, amount);
+    }
+    Ok(stock)
 }

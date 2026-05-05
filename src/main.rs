@@ -37,22 +37,21 @@ pub struct AppState{
 #[tokio::main]
 async fn main() {
     //initialize database
-    let db = match db_init(false) {
-        Ok(db)=> db,
+    let (db, stock) = match db_init(false) {
+        Ok((db,stock))=> (db,stock),
         Err(e)=> {
             println!("Failed to initialize database: {e}");
             return ;
         }
     };
-    //TODO get last id from database and set num_orders equal to that 
     //initalize shared state here
     let state = AppState{
         carts : Arc::new(Mutex::new(HashMap::new())),
-        inventory  :Arc::new(Mutex::new(Inventory::new())),
+        inventory  :Arc::new(Mutex::new(Inventory::new(stock))),
         num_orders: Arc::new(Mutex::new(Database::get_num_orders(&db)+1)),
         db : Arc::new(Mutex::new(db))
     };
-
+ 
 
     //assign our handlers to the route
     let app = Router::new()

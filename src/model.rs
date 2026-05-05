@@ -25,6 +25,7 @@ then update inventory
 */
 use std::collections::HashMap;
 
+
 #[derive(Debug, Clone, Copy)]
 pub enum Size{
     Small,
@@ -108,17 +109,16 @@ pub struct Inventory{
 //disregard the large,small,medium that we can implement later
 //so with the simulation just gonna remove one bag per purchase
 impl Inventory{
-    pub fn new() -> Self{
+    pub fn new(stock: HashMap<Coffee,i32>) -> Self{
 
-        //TODO: read from database to get these values
-        let mut stock = HashMap::new();
 
-        stock.insert(Coffee::Columbian, 100);
-        stock.insert(Coffee::Arabica, 100);
-        stock.insert(Coffee::Robusta, 100);
-        stock.insert(Coffee::Excelsa, 100);
-        stock.insert(Coffee::BreakfastBlend, 100);
-        stock.insert(Coffee::MidnightRoast, 100);
+        // stock.insert(Coffee::Columbian, 100);
+        // stock.insert(Coffee::Arabica, 100);
+        // stock.insert(Coffee::Robusta, 100);
+        // stock.insert(Coffee::Excelsa, 100);
+        // stock.insert(Coffee::BreakfastBlend, 100);
+        // stock.insert(Coffee::MidnightRoast, 100);
+
 
         Inventory { stock }
 
