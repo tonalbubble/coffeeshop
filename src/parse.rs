@@ -1,6 +1,6 @@
 use crate::model::{Coffee, Size};
 
-
+//simple file to parse strings into enum types
 pub fn parse_coffee(s: &str) -> Coffee {
     match s {
         "Columbian"      => Coffee::Columbian,

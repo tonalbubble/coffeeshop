@@ -152,7 +152,7 @@ pub async fn admin_page(State(state): State<AppState>) -> Html<String>{
         Err(e) => return Html(format!("Inventory error: {e}").to_string())
     };
 
-    //initialize empty html string to push onto
+    //initialize html string to push onto
     let mut html = r#"
         <title>Management Page</title>
         
@@ -169,11 +169,10 @@ pub async fn admin_page(State(state): State<AppState>) -> Html<String>{
             </li></h3>"#
         ));
     }
-
+    //add a home page link to allow user to go back
     html.push_str(r#"<h2><a href="/">Home Page</a></h2>"#);
     Html(html)
 }
-
 
 
 //Query allows for deserialize to map our AddOrderParams struct with the values from the URLs
@@ -257,13 +256,11 @@ pub async fn add_inventory(State(state) : State<AppState>, Query(params) : Query
 //basic function to remove item from buying list
 //didn't have time to implement :(
 // pub async fn remove(State(state): State<AppState>, Query(RemoveParams)) -> Redirect{
-
 // }
 
 
 /*
-function checkout: takes in the state and checkout params, removes things from database that were in customer's cart,
-adds checkout struct/db entry, etc.
+function checkout: takes in the state and checkout params, asks customer for confirmation, gives option to confirm or go back
 */
 pub async fn checkout(State(state): State<AppState>, Query(params): Query<CheckoutParams>) -> Html<String>{
     //access cart struct based on id, get everything in the order
@@ -354,7 +351,6 @@ pub async fn confirm_checkout(State(state): State<AppState>, Query(params): Quer
             return Html("Cart already checked out or missing".to_string());
         }
     };
-
 
     //html page for checkout confirmation
     let html = format!(

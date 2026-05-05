@@ -108,17 +108,10 @@ pub struct Inventory{
 //basically just gonna do number of bags available
 //disregard the large,small,medium that we can implement later
 //so with the simulation just gonna remove one bag per purchase
+
 impl Inventory{
+    //this will take in the stock values from the database
     pub fn new(stock: HashMap<Coffee,i32>) -> Self{
-
-
-        // stock.insert(Coffee::Columbian, 100);
-        // stock.insert(Coffee::Arabica, 100);
-        // stock.insert(Coffee::Robusta, 100);
-        // stock.insert(Coffee::Excelsa, 100);
-        // stock.insert(Coffee::BreakfastBlend, 100);
-        // stock.insert(Coffee::MidnightRoast, 100);
-
 
         Inventory { stock }
 
@@ -147,17 +140,10 @@ impl Inventory{
         false
     }
 
-    //Commented out bc we don't use it anywhere
-    // fn print_inventory(&self){
-    //     println!("--------INVENTORY---------");
-    //     for(coffee, amount) in &self.stock{
-    //         println!("{:?}, {}", coffee, amount);
-    //     }
-    // }
-
 }
 
 impl Coffee{
+    //description: we didn't really ednd up using this
     pub fn description(&self) -> &'static str{
         match self {
             Coffee::Columbian => "Smooth and balanced with mild acidity",
@@ -169,7 +155,7 @@ impl Coffee{
             
         }
     }
-
+    //simple to_string func
     pub fn to_str(&self) -> &str {
         match self {
             Coffee::Columbian => "Columbian",
@@ -186,6 +172,7 @@ impl Coffee{
 
 //might need lifetimes('a things) for the coffeeitem in the parameters
 //this would be represented by an object like 2 bags og Columbian Dark size L which would then be 24 as price
+//ItemOrder contains a customer's order of coffee
 #[derive(Debug, Clone)]
 pub struct ItemOrder{
     pub coffee : Coffee,
@@ -196,13 +183,13 @@ pub struct ItemOrder{
 }
 
 
-//
+
 impl ItemOrder{
 
     fn new(new_coffee : Coffee, new_roast : Roast, new_size : Size, new_quantity : i32) -> Self{
 
         let quantity_float = new_quantity as f32;
-
+        //use price method to get total price 
         let total_price = new_size.price() * quantity_float;
 
         ItemOrder{
@@ -216,13 +203,11 @@ impl ItemOrder{
 
 }
 
-//the vector will contain different item orders, 
 
 //customerOrder struct will basically be like a receipt of everything they bought
 #[derive(Debug, Clone)]
 pub struct CustomerOrder{
     pub id : i32,
-    //pub customer_id : i32,
     pub items : Vec<ItemOrder>,
     pub total_price : f32
 }   
@@ -233,57 +218,50 @@ impl CustomerOrder{
 
         CustomerOrder{
             id : new_id,
-            //customer_id : customer_id,
             items : Vec::new(),
             total_price : 0.0
         }
     }
-
+    //add item to struct
     pub fn add_item(&mut self, coffee: Coffee, roast: Roast, size: Size, quantity: i32){
 
-        //let coffee_item = CofffeItem::new(coffee, roast);
         let item = ItemOrder::new(coffee, roast, size, quantity);
-
-
         self.total_price += item.price;
         self.items.push(item);
-
 
     }
 }
 
 
-
+//unit tests ran with cargo test
 #[cfg(test)]
-
 mod tests{
 
     use super::*;
 
-    #[test]
+    #[test] //test adding stock
     fn add_stock(){
-        let mut inventory = Inventory::new();
+        let mut hash = HashMap::new();
+        hash.insert(Coffee::Arabica,100);
+        let mut inventory = Inventory::new(hash);
         inventory.add_stock(Coffee::Arabica, 20);
-
         assert_eq!(inventory.stock[&Coffee::Arabica], 120)
     }
 
-
-    #[test]
+    #[test] //test reducing stock
     fn reduce_stock_insufficient(){
-        let mut inventory = Inventory::new();
+        let mut hash = HashMap::new();
+        hash.insert(Coffee::Columbian,100);
+        let mut inventory = Inventory::new(hash);
 
-
-        //reduce_stokc returns a bool(true if succesful false if not enough stock in inventory)
+        //reduce_stock returns a bool(true if succesful false if not enough stock in inventory)
         let result = inventory.reduce_stock(Coffee::Columbian, 101);
-
         assert!(!result);
         assert_eq!(inventory.stock[&Coffee::Columbian], 100);
-
     }
 
 
-    #[test]
+    #[test] //test item pricing if we add items
     fn test_add_items_total(){
         let mut order = CustomerOrder::new(1);
 
@@ -292,11 +270,9 @@ mod tests{
         assert_eq!(order.total_price, 24.0);
     }
 
-
-    #[test]
+    #[test] //test creating a new order
     fn test_new_order(){
-        let mut order = CustomerOrder::new(2);
-
+        let order = CustomerOrder::new(2);
         assert_eq!(order.total_price, 0.0);
         assert_eq!(order.items.len(), 0);
     }

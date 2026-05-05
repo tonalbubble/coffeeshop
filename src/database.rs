@@ -97,7 +97,7 @@ impl Database{
 
     //function to know what cart id to start on upon startup
     pub fn get_num_orders(&self) -> i32 {
-        //use a single-value select statement to get the 
+        //use a single-value select coalesce statement to get the value
         let max_id; 
         match self.conn.query_row(
             "SELECT COALESCE(MAX(order_id), 0) FROM orders",
@@ -110,21 +110,19 @@ impl Database{
                 println!("error loading number of orders");
             }
         };
-
         max_id
     }
-
-
 }
 
 
-//this function lets us connect to an existing database OR creaet a new one
+//this function lets us connect to an existing database OR create a new one
 //takes in bool on whether we want to start fresh or connect to an existing file
 pub fn db_init(new_db: bool) -> Result<(Database,HashMap<Coffee,i32>), rusqlite::Error>{
     let mut stock = HashMap::new();
     let db = match Database::new("sql/coffee.db".to_string()){
         Ok(db) => {
             println!("Successfully connected to {}",{&db.name});
+            //immediately load inventory data from the db
             match load_inventory(&db){
                 Ok(inv) => stock = inv,
                 Err(_) => println!("failed to read inventory from database")
@@ -138,6 +136,7 @@ pub fn db_init(new_db: bool) -> Result<(Database,HashMap<Coffee,i32>), rusqlite:
     };
 
     //if it's a new database, we create tables and insert products
+    //create_tables also drops any existing tables to start fresh
     if new_db{
         match db.create_tables(){
             Ok(_) => println!("Tables created successfully"),
@@ -159,12 +158,14 @@ pub fn load_inventory(db: &Database) -> Result<HashMap<Coffee, i32>, Error>{
 
     let mut statement = db.conn.prepare("SELECT name, amount FROM product")?;
 
+    //row query map to get product name and amount values
     let rows = statement.query_map([],|row|{
         let coffee: String = row.get(0)?;
         let amount: i32 =  row.get(1)?;
         Ok((coffee,amount))
     })?;
 
+    //go through each row, parse data, add coffee type and amount to stock
     for row in rows{
         let (coffee,amount) = row?;
         let coffee = parse_coffee(&coffee);
